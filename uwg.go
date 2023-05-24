@@ -2,11 +2,13 @@ package upperWaitGroup
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
 type upperWaitGroup struct {
-	upperWg chan struct{}
-	wg      sync.WaitGroup
+	upperWg  chan struct{}
+	wg       sync.WaitGroup
+	doCancel atomic.Bool
 }
 
 func NewUpperWaitGroup(max int) *upperWaitGroup {
@@ -17,9 +19,13 @@ func NewUpperWaitGroup(max int) *upperWaitGroup {
 	return &uwg
 }
 
-func (uwg *upperWaitGroup) Add() {
+func (uwg *upperWaitGroup) Add() bool {
+	if uwg.doCancel.Load() {
+		return false
+	}
 	uwg.wg.Add(1)
 	uwg.upperWg <- struct{}{}
+	return true
 }
 
 func (uwg *upperWaitGroup) Done() {
@@ -29,4 +35,8 @@ func (uwg *upperWaitGroup) Done() {
 
 func (uwg *upperWaitGroup) Wait() {
 	uwg.wg.Wait()
+}
+
+func (uwg *upperWaitGroup) Cancel() {
+	uwg.doCancel.Store(true)
 }
