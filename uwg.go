@@ -6,15 +6,18 @@ import (
 )
 
 type upperWaitGroup struct {
-	upperWg  chan struct{}
-	wg       sync.WaitGroup
-	doCancel atomic.Bool
+	waitGroup sync.WaitGroup
+	doCancel  atomic.Bool
+	current   atomic.Int32
+	waitMutex sync.Mutex
+	upper     atomic.Int32
 }
 
 func NewUpperWaitGroup(max int) *upperWaitGroup {
 	var uwg upperWaitGroup
 
-	uwg.upperWg = make(chan struct{}, max)
+	uwg.current.Store(0)
+	uwg.upper.Store(int32(max))
 
 	return &uwg
 }
@@ -23,18 +26,29 @@ func (uwg *upperWaitGroup) Add() bool {
 	if uwg.doCancel.Load() {
 		return false
 	}
-	uwg.wg.Add(1)
-	uwg.upperWg <- struct{}{}
-	return true
+	uwg.waitGroup.Add(1)
+	for {
+		if uwg.current.Add(1) <= uwg.upper.Load() {
+			return true
+		}
+		uwg.current.Add(-1)
+		uwg.waitMutex.Lock()
+	}
+}
+
+func (uwg *upperWaitGroup) SetUpper(max int) {
+	uwg.upper.Store(int32(max))
 }
 
 func (uwg *upperWaitGroup) Done() {
-	uwg.wg.Done()
-	<-uwg.upperWg
+	uwg.waitGroup.Done()
+	uwg.current.Add(-1)
+	uwg.waitMutex.TryLock()
+	uwg.waitMutex.Unlock()
 }
 
 func (uwg *upperWaitGroup) Wait() {
-	uwg.wg.Wait()
+	uwg.waitGroup.Wait()
 }
 
 func (uwg *upperWaitGroup) Cancel() {
