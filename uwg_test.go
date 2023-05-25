@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func doWork(uwg *upperWaitGroup, count int, sleep time.Duration, done []bool) {
+func doWork(uwg *UpperWaitGroup, count int, sleep time.Duration, done []bool) {
 	for i := 0; i < count; i++ {
 		if !uwg.Add() {
 			break

@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 )
 
-type upperWaitGroup struct {
+type UpperWaitGroup struct {
 	waitGroup sync.WaitGroup
 	doCancel  atomic.Bool
 	current   atomic.Int32
@@ -13,8 +13,8 @@ type upperWaitGroup struct {
 	upper     atomic.Int32
 }
 
-func NewUpperWaitGroup(max int) *upperWaitGroup {
-	var uwg upperWaitGroup
+func NewUpperWaitGroup(max int) *UpperWaitGroup {
+	var uwg UpperWaitGroup
 
 	uwg.current.Store(0)
 	uwg.upper.Store(int32(max))
@@ -22,7 +22,7 @@ func NewUpperWaitGroup(max int) *upperWaitGroup {
 	return &uwg
 }
 
-func (uwg *upperWaitGroup) Add() bool {
+func (uwg *UpperWaitGroup) Add() bool {
 	if uwg.doCancel.Load() {
 		return false
 	}
@@ -36,21 +36,21 @@ func (uwg *upperWaitGroup) Add() bool {
 	}
 }
 
-func (uwg *upperWaitGroup) SetUpper(max int) {
+func (uwg *UpperWaitGroup) SetUpper(max int) {
 	uwg.upper.Store(int32(max))
 }
 
-func (uwg *upperWaitGroup) Done() {
+func (uwg *UpperWaitGroup) Done() {
 	uwg.waitGroup.Done()
 	uwg.current.Add(-1)
 	uwg.waitMutex.TryLock()
 	uwg.waitMutex.Unlock()
 }
 
-func (uwg *upperWaitGroup) Wait() {
+func (uwg *UpperWaitGroup) Wait() {
 	uwg.waitGroup.Wait()
 }
 
-func (uwg *upperWaitGroup) Cancel() {
+func (uwg *UpperWaitGroup) Cancel() {
 	uwg.doCancel.Store(true)
 }
