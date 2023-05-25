@@ -11,6 +11,7 @@ type UpperWaitGroup struct {
 	current   atomic.Int32
 	waitMutex sync.Mutex
 	upper     atomic.Int32
+	doneMutex sync.Mutex // prevent parallel calling of Done()
 }
 
 func NewUpperWaitGroup(max int) *UpperWaitGroup {
@@ -41,10 +42,12 @@ func (uwg *UpperWaitGroup) SetUpper(max int) {
 }
 
 func (uwg *UpperWaitGroup) Done() {
+	uwg.doneMutex.Lock()
 	uwg.waitGroup.Done()
 	uwg.current.Add(-1)
 	uwg.waitMutex.TryLock()
 	uwg.waitMutex.Unlock()
+	uwg.doneMutex.Unlock()
 }
 
 func (uwg *UpperWaitGroup) Wait() {
