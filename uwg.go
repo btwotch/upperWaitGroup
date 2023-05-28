@@ -6,12 +6,13 @@ import (
 )
 
 type UpperWaitGroup struct {
-	waitGroup sync.WaitGroup
-	doCancel  atomic.Bool
-	current   atomic.Int32
-	waitMutex sync.Mutex
-	upper     atomic.Int32
-	doneMutex sync.Mutex // prevent parallel calling of Done()
+	waitGroup      sync.WaitGroup
+	waitGroupMutex sync.Mutex
+	doCancel       atomic.Bool
+	current        atomic.Int32
+	waitMutex      sync.Mutex
+	upper          atomic.Int32
+	doneMutex      sync.Mutex // prevent parallel calling of Done()
 }
 
 func NewUpperWaitGroup(max int) *UpperWaitGroup {
@@ -27,7 +28,9 @@ func (uwg *UpperWaitGroup) Add() bool {
 	if uwg.doCancel.Load() {
 		return false
 	}
+	uwg.waitGroupMutex.Lock()
 	uwg.waitGroup.Add(1)
+	uwg.waitGroupMutex.Unlock()
 	for {
 		if uwg.current.Add(1) <= uwg.upper.Load() {
 			return true
@@ -45,13 +48,16 @@ func (uwg *UpperWaitGroup) Done() {
 	uwg.doneMutex.Lock()
 	uwg.waitGroup.Done()
 	uwg.current.Add(-1)
+
 	uwg.waitMutex.TryLock()
 	uwg.waitMutex.Unlock()
 	uwg.doneMutex.Unlock()
 }
 
 func (uwg *UpperWaitGroup) Wait() {
+	uwg.waitGroupMutex.Lock()
 	uwg.waitGroup.Wait()
+	uwg.waitGroupMutex.Unlock()
 }
 
 func (uwg *UpperWaitGroup) Cancel() {
