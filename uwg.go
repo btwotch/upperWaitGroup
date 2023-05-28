@@ -57,3 +57,7 @@ func (uwg *UpperWaitGroup) Wait() {
 func (uwg *UpperWaitGroup) Cancel() {
 	uwg.doCancel.Store(true)
 }
+
+func (uwg *UpperWaitGroup) Current() int {
+	return int(uwg.current.Load())
+}
