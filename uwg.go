@@ -44,6 +44,10 @@ func (uwg *UpperWaitGroup) SetUpper(max int) {
 	uwg.upper.Store(int32(max))
 }
 
+func (uwg *UpperWaitGroup) GetUpper() int {
+	return int(uwg.upper.Load())
+}
+
 func (uwg *UpperWaitGroup) Done() {
 	uwg.doneMutex.Lock()
 	uwg.waitGroup.Done()
